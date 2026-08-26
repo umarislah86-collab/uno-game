@@ -6,9 +6,11 @@ import RulesModal from '../components/RulesModal'
 
 interface HomeProps {
   onEnterRoom: (roomId: string) => void
+  onRejoin: () => void
+  savedRoomId: string | null
 }
 
-export default function Home({ onEnterRoom }: HomeProps) {
+export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) {
   const { playerId, playerName, setPlayerName } = usePlayer()
   const [nameInput, setNameInput] = useState(playerName)
   const [roomInput, setRoomInput] = useState('')
@@ -74,6 +76,19 @@ export default function Home({ onEnterRoom }: HomeProps) {
         transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
         className="bg-white/5 border border-white/10 rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
       >
+        {/* Rejoin banner */}
+        {savedRoomId && (
+          <motion.button
+            onClick={onRejoin}
+            whileTap={{ scale: 0.97 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full bg-green-700 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2"
+          >
+            <span>↩</span>
+            <span>Sambung Game — Room <span className="tracking-widest">{savedRoomId}</span></span>
+          </motion.button>
+        )}
         {/* Name input */}
         <div>
           <label className="text-white/60 text-xs uppercase tracking-wider block mb-1">Nama kau</label>
