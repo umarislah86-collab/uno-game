@@ -9,6 +9,7 @@ import DrawPile from '../components/DrawPile'
 import PlayerSeat from '../components/PlayerSeat'
 import UnoButton from '../components/UnoButton'
 import WildColorPicker from '../components/WildColorPicker'
+import RulesModal from '../components/RulesModal'
 
 interface GameProps {
   game: GameState
@@ -19,6 +20,7 @@ interface GameProps {
 export default function Game({ game, playerId, onBack }: GameProps) {
   const [pendingWildCard, setPendingWildCard] = useState<Card | null>(null)
   const [unoCalled, setUnoCalled] = useState(false)
+  const [showRules, setShowRules] = useState(false)
 
   const myHand = game.hands[playerId] ?? []
   const topCard = game.discardPile[game.discardPile.length - 1] ?? null
@@ -91,17 +93,24 @@ export default function Game({ game, playerId, onBack }: GameProps) {
             {game.direction === 1 ? '→' : '←'} Room: {game.id}
           </span>
         </div>
-        {unoCalled && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="text-red-400 font-black text-lg"
-            style={{ fontFamily: 'Arial Black, sans-serif' }}
+        <div className="flex items-center gap-2">
+          {unoCalled && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="text-red-400 font-black text-lg"
+              style={{ fontFamily: 'Arial Black, sans-serif' }}
+            >
+              UNO!
+            </motion.span>
+          )}
+          <button
+            onClick={() => setShowRules(true)}
+            className="text-white/30 hover:text-white/70 text-sm w-6 h-6 rounded-full border border-white/20 flex items-center justify-center transition"
           >
-            UNO!
-          </motion.span>
-        )}
-        {!unoCalled && <div className="w-16" />}
+            ?
+          </button>
+        </div>
       </div>
 
       {/* Last action toast */}
@@ -183,6 +192,9 @@ export default function Game({ game, playerId, onBack }: GameProps) {
           <WildColorPicker onPick={handleWildColor} />
         )}
       </AnimatePresence>
+
+      {/* Rules modal */}
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>
   )
 }

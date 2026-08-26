@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { createGame, joinGame } from '../lib/gameActions'
 import { usePlayer } from '../hooks/usePlayer'
+import RulesModal from '../components/RulesModal'
 
 interface HomeProps {
   onEnterRoom: (roomId: string) => void
@@ -13,6 +14,7 @@ export default function Home({ onEnterRoom }: HomeProps) {
   const [roomInput, setRoomInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showRules, setShowRules] = useState(false)
 
   function genRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase()
@@ -132,6 +134,15 @@ export default function Home({ onEnterRoom }: HomeProps) {
       </motion.div>
 
       <p className="text-white/20 text-xs mt-6">2–6 players</p>
+
+      <button
+        onClick={() => setShowRules(true)}
+        className="mt-3 text-white/30 hover:text-white/60 text-xs underline underline-offset-2 transition"
+      >
+        ? Peraturan Permainan
+      </button>
+
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>
   )
 }
