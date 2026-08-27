@@ -5,12 +5,23 @@ import { leaveGame } from './lib/gameActions'
 import Home from './pages/Home'
 import Lobby from './pages/Lobby'
 import Game from './pages/Game'
+import BotGame from './pages/BotGame'
+import type { GameMode } from './lib/types'
+import type { BotDifficulty } from './lib/botLogic'
 import './index.css'
 
 const LAST_ROOM_KEY = 'uno_last_room'
 
+interface BotConfig {
+  difficulty: BotDifficulty
+  botCount: number
+  gameMode: GameMode
+  humanName: string
+}
+
 export default function App() {
   const [roomId, setRoomId] = useState<string | null>(null)
+  const [botConfig, setBotConfig] = useState<BotConfig | null>(null)
   const { playerId } = usePlayer()
   const { game, loading } = useGame(roomId)
 
@@ -22,7 +33,6 @@ export default function App() {
   async function handleBack() {
     if (roomId) {
       await leaveGame(roomId, playerId)
-      // Only clear saved room if leaving from lobby (permanent leave)
       if (!game || game.status === 'lobby') {
         localStorage.removeItem(LAST_ROOM_KEY)
       }
@@ -35,6 +45,10 @@ export default function App() {
     if (saved) setRoomId(saved)
   }
 
+  function handleStartBotGame(difficulty: BotDifficulty, botCount: number, gameMode: GameMode, humanName: string) {
+    setBotConfig({ difficulty, botCount, gameMode, humanName })
+  }
+
   // Clear saved room when game finishes
   if (game?.status === 'finished') {
     localStorage.removeItem(LAST_ROOM_KEY)
@@ -42,8 +56,29 @@ export default function App() {
 
   const savedRoomId = localStorage.getItem(LAST_ROOM_KEY)
 
+  // VS Bot mode (local, no Firebase)
+  if (botConfig) {
+    return (
+      <BotGame
+        humanId={playerId}
+        humanName={botConfig.humanName}
+        botCount={botConfig.botCount}
+        difficulty={botConfig.difficulty}
+        gameMode={botConfig.gameMode}
+        onBack={() => setBotConfig(null)}
+      />
+    )
+  }
+
   if (!roomId) {
-    return <Home onEnterRoom={handleEnterRoom} onRejoin={handleRejoin} savedRoomId={savedRoomId} />
+    return (
+      <Home
+        onEnterRoom={handleEnterRoom}
+        onRejoin={handleRejoin}
+        savedRoomId={savedRoomId}
+        onStartBotGame={handleStartBotGame}
+      />
+    )
   }
 
   if (loading) {
