@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { startGame } from '../lib/gameActions'
 import type { GameState } from '../lib/types'
@@ -11,6 +12,15 @@ interface LobbyProps {
 export default function Lobby({ game, playerId, onBack }: LobbyProps) {
   const isHost = game.hostId === playerId
   const playerList = game.playerOrder.map(id => game.players[id]).filter(Boolean)
+  const [copied, setCopied] = useState(false)
+
+  function handleCopyLink() {
+    const url = `${window.location.origin}${window.location.pathname}?room=${game.id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    })
+  }
 
   return (
     <div className="min-h-screen bg-[#1a1a2e] flex flex-col items-center justify-center p-4">
@@ -42,6 +52,13 @@ export default function Lobby({ game, playerId, onBack }: LobbyProps) {
             </span>
           </div>
           <p className="text-white/40 text-sm mt-2">Kongsi code ni dengan kawan-kawan kau</p>
+          <motion.button
+            onClick={handleCopyLink}
+            whileTap={{ scale: 0.95 }}
+            className="mt-3 inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 text-sm font-bold px-5 py-2 rounded-xl transition"
+          >
+            {copied ? '✓ Link disalin!' : '🔗 Copy Link'}
+          </motion.button>
         </div>
 
         {/* Player list */}

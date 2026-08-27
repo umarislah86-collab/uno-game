@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { createGame, joinGame } from '../lib/gameActions'
 import { usePlayer } from '../hooks/usePlayer'
@@ -19,6 +19,16 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) 
   const [error, setError] = useState('')
   const [showRules, setShowRules] = useState(false)
   const [gameMode, setGameMode] = useState<GameMode>('standard')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const room = params.get('room')
+    if (room) {
+      setRoomInput(room.toUpperCase())
+      // Clean URL so refresh doesn't re-trigger
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   function genRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase()
