@@ -79,6 +79,14 @@ const mamakRules = [
     ],
   },
   {
+    title: 'Draw Sehingga Dapat',
+    items: [
+      'Dalam mamak mode, tekan deck untuk ambik kad satu-satu.',
+      'Kau MESTI main sekurang-kurangnya 1 kad ke discard pile sebelum giliran bertukar.',
+      'Boleh terus ambik kad walaupun dah ada kad yang boleh dimain — pilihan kau.',
+    ],
+  },
+  {
     title: 'Tangkap UNO!',
     items: [
       'Bila seseorang ada tinggal 1 kad, butang "Tangkap!" muncul kat nama dia.',

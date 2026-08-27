@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Card, CardColor, GameState } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
-import { callUno, catchUno, drawCard, passMultiPlay, passDraw, reshuffleDraw, playCard, resolveWild4Challenge } from '../lib/gameActions'
+import { callUno, catchUno, drawCard, passMultiPlay, reshuffleDraw, playCard, resolveWild4Challenge } from '../lib/gameActions'
 import Hand from '../components/Hand'
 import DiscardPile from '../components/DiscardPile'
 import DrawPile from '../components/DrawPile'
@@ -29,9 +29,6 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   const isMyTurn = currentPlayerId === playerId
   const isMultiPlay = isMamak && !!game.multiPlayType && isMyTurn
   const isDrawPhase = isMamak && game.mamakDrawPhase === playerId && isMyTurn
-  const hasPlayableInDrawPhase = isDrawPhase && topCard
-    ? myHand.some(c => isPlayable(c, topCard, game.currentColor, 0, game.gameMode))
-    : false
 
   // Wild4 challenge: is it my turn to decide?
   const myChallenge = isMamak && game.wild4Challenge?.victimId === playerId
@@ -186,9 +183,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
             exit={{ opacity: 0 }}
             className="text-center text-blue-300 text-xs py-1.5 bg-blue-900/30 font-bold"
           >
-            {hasPlayableInDrawPhase
-              ? '🃏 Jumpa kad! Main atau tekan Lepas untuk skip giliran.'
-              : '📥 Ambik lagi kad sehingga jumpa yang boleh dimain...'}
+            📥 Kena main sekurang-kurangnya 1 kad sebelum giliran bertukar!
           </motion.div>
         )}
       </AnimatePresence>
@@ -269,17 +264,6 @@ export default function Game({ game, playerId, onBack }: GameProps) {
               className="bg-green-600 hover:bg-green-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
             >
               Selesai ✓
-            </motion.button>
-          )}
-          {isDrawPhase && hasPlayableInDrawPhase && (
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => passDraw(game.id, playerId)}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
-            >
-              Lepas →
             </motion.button>
           )}
           <UnoButton onUno={handleUno} canCallUno={canCallUno} />
