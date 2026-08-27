@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Card, CardColor, GameState } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
-import { callUno, catchUno, drawCard, passMultiPlay, reshuffleDraw, playCard, resolveWild4Challenge } from '../lib/gameActions'
+import { callUno, catchUno, drawCard, passMultiPlay, reshuffleDraw, playCard } from '../lib/gameActions'
 import Hand from '../components/Hand'
 import DiscardPile from '../components/DiscardPile'
 import DrawPile from '../components/DrawPile'
@@ -30,10 +30,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   const isMultiPlay = isMamak && !!game.multiPlayType && isMyTurn
   const isDrawPhase = isMamak && game.mamakDrawPhase === playerId && isMyTurn
 
-  // Wild4 challenge: is it my turn to decide?
-  const myChallenge = isMamak && game.wild4Challenge?.victimId === playerId
-    ? game.wild4Challenge
-    : null
+  // Wild4 challenge removed — mamak uses pure stacking
 
   // Other players (not me)
   const otherPlayers = game.playerOrder
@@ -48,7 +45,6 @@ export default function Game({ game, playerId, onBack }: GameProps) {
 
   function handlePlay(card: Card) {
     if (!isMyTurn) return
-    if (myChallenge) return
     if (!isPlayable(card, topCard, game.currentColor, game.pendingStack, game.gameMode, game.multiPlayType)) return
 
     if (card.type === 'wild' || card.type === 'wild4') {
@@ -67,7 +63,6 @@ export default function Game({ game, playerId, onBack }: GameProps) {
 
   function handleDraw() {
     if (!isMyTurn) return
-    if (myChallenge) return
     if (isMultiPlay) return
     drawCard(game.id, playerId)
   }
@@ -79,7 +74,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   }
 
   const canCallUno = myHand.length === 2 && isMyTurn && !unoCalled
-  const showStackWarning = isMamak && game.pendingStack > 0 && isMyTurn && !myChallenge
+  const showStackWarning = isMamak && game.pendingStack > 0 && isMyTurn
 
   if (game.status === 'finished') {
     return <WinScreen game={game} playerId={playerId} onBack={onBack} />
@@ -220,7 +215,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
         <DrawPile
           count={game.deck.length}
           onDraw={handleDraw}
-          canDraw={isMyTurn && !myChallenge && !isMultiPlay}
+          canDraw={isMyTurn && !isMultiPlay}
         />
         <DiscardPile topCard={topCard} />
         <motion.button
@@ -274,7 +269,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
       <div className="pb-4 min-h-[120px]">
         <Hand
           cards={myHand}
-          isMyTurn={isMyTurn && !myChallenge}
+          isMyTurn={isMyTurn}
           topCard={topCard}
           currentColor={game.currentColor}
           pendingStack={game.pendingStack}
@@ -288,52 +283,6 @@ export default function Game({ game, playerId, onBack }: GameProps) {
       <AnimatePresence>
         {pendingWildCard && (
           <WildColorPicker onPick={handleWildColor} />
-        )}
-      </AnimatePresence>
-
-      {/* Wild +4 Challenge modal (mamak only) */}
-      <AnimatePresence>
-        {myChallenge && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.85 }}
-              animate={{ scale: 1 }}
-              className="bg-[#16213e] border border-orange-500/30 rounded-2xl p-6 w-full max-w-xs text-center"
-            >
-              <div className="text-4xl mb-3">🃏</div>
-              <h3 className="text-white font-black text-xl mb-1">Wild +4 Dimain!</h3>
-              <p className="text-white/50 text-sm mb-1">
-                {game.players[myChallenge.attackerId]?.name} main Wild +4
-              </p>
-              <p className="text-orange-300 text-sm mb-5">
-                Challenge atau terima +{game.pendingStack} kad?
-              </p>
-              <div className="flex flex-col gap-3">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => resolveWild4Challenge(game.id, playerId, true)}
-                  className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition"
-                >
-                  ⚔️ Challenge!
-                  <span className="block text-xs font-normal text-orange-200 mt-0.5">
-                    (Kalau dia ada kad warna {game.currentColor}, dia draw 4)
-                  </span>
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => resolveWild4Challenge(game.id, playerId, false)}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl transition"
-                >
-                  Terima (+{game.pendingStack} kad)
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
         )}
       </AnimatePresence>
 

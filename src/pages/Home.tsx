@@ -132,7 +132,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) 
           </div>
           {gameMode === 'mamak' && (
             <p className="text-orange-400/70 text-xs mt-1.5">
-              Stack +2/+4 · Tangkap UNO · Challenge Wild +4
+              Stack +2/+4 · Tangkap UNO · Multi-play
             </p>
           )}
         </div>

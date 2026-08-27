@@ -59,15 +59,8 @@ const mamakRules = [
       'Kalau kau kena +2 atau +4, kau boleh stack kad +2 atau +4 untuk pass penalty ke pemain seterusnya.',
       'Penalty berkumpul sehingga ada pemain yang tak boleh stack — pemain tu kena draw semua.',
       'Contoh: A main +2 → B stack +4 → C stack +2 → D kena draw 8 kad!',
-    ],
-  },
-  {
-    title: 'Challenge Wild +4',
-    items: [
-      'Bila seseorang main Wild +4, kau boleh Challenge sebelum draw.',
-      'Kalau dia memang ada kad warna semasa → Challenge berjaya, dia draw 4.',
-      'Kalau dia betul-betul takde kad → Challenge gagal, kau draw pendingStack + 2.',
-      'Kalau kau terima (tak challenge) → kau draw pendingStack.',
+      'Pemain yang sama boleh letak beberapa +4 sekali gus (multi-play) sebelum giliran bertukar.',
+      'Contoh: Lai ada 2x Wild +4 → letak dua-dua → victim kena draw 8 (atau stack balik).',
     ],
   },
   {

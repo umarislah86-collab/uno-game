@@ -40,11 +40,6 @@ export function applyPlayCard(
   const hand = newState.hands[playerId]
   const isMamak = newState.gameMode === 'mamak'
 
-  // Check if attacker had a matching color card (for wild4 challenge)
-  const attackerHadMatchingColor = isMamak && card.type === 'wild4'
-    ? hand.filter(c => c.id !== card.id).some(c => c.color === state.currentColor)
-    : false
-
   // Remove card from hand
   newState.hands[playerId] = hand.filter(c => c.id !== card.id)
 
@@ -119,23 +114,17 @@ export function applyPlayCard(
 
     case 'wild4': {
       if (isMamak) {
-        const nextIdx = getNextPlayerIndex(newState)
-        const nextId = newState.playerOrder[nextIdx]
-        if (newState.pendingStack === 0) {
-          // First draw card in chain: offer challenge, don't advance yet
-          newState.pendingStack = 4
-          newState.wild4Challenge = {
-            attackerId: playerId,
-            victimId: nextId,
-            attackerHadMatchingColor,
-          }
-          newState.currentPlayerIndex = nextIdx
-          newState.lastAction = `${newState.players[playerId].name} played Wild +4! Challenge?`
+        newState.pendingStack += 4
+        newState.wild4Challenge = null
+        // Multi-play: if player still has more wild4, keep their turn
+        const moreWild4 = newState.hands[playerId].filter(c => c.type === 'wild4')
+        if (moreWild4.length > 0) {
+          newState.multiPlayType = 'wild4'
+          newState.lastAction = `${newState.players[playerId].name} stacked +4! (Total: +${newState.pendingStack}) — ada lagi!`
         } else {
-          // Stacking on existing chain: no challenge
-          newState.pendingStack += 4
-          newState.currentPlayerIndex = nextIdx
-          newState.lastAction = `${newState.players[playerId].name} stacked +4! (Total: +${newState.pendingStack})`
+          newState.multiPlayType = null
+          newState.currentPlayerIndex = getNextPlayerIndex(newState)
+          newState.lastAction = `${newState.players[playerId].name} played Wild +4! Stack: +${newState.pendingStack}`
         }
       } else {
         const nextIdx = getNextPlayerIndex(newState)
