@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Card, CardColor, GameState } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
-import { callUno, catchUno, drawCard, playCard, resolveWild4Challenge } from '../lib/gameActions'
+import { callUno, catchUno, drawCard, passMultiPlay, playCard, resolveWild4Challenge } from '../lib/gameActions'
 import Hand from '../components/Hand'
 import DiscardPile from '../components/DiscardPile'
 import DrawPile from '../components/DrawPile'
@@ -27,6 +27,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   const topCard = game.discardPile[game.discardPile.length - 1] ?? null
   const currentPlayerId = game.playerOrder[game.currentPlayerIndex]
   const isMyTurn = currentPlayerId === playerId
+  const isMultiPlay = isMamak && !!game.multiPlayType && isMyTurn
 
   // Wild4 challenge: is it my turn to decide?
   const myChallenge = isMamak && game.wild4Challenge?.victimId === playerId
@@ -46,8 +47,8 @@ export default function Game({ game, playerId, onBack }: GameProps) {
 
   function handlePlay(card: Card) {
     if (!isMyTurn) return
-    if (myChallenge) return // must resolve challenge first
-    if (!isPlayable(card, topCard, game.currentColor, game.pendingStack, game.gameMode)) return
+    if (myChallenge) return
+    if (!isPlayable(card, topCard, game.currentColor, game.pendingStack, game.gameMode, game.multiPlayType)) return
 
     if (card.type === 'wild' || card.type === 'wild4') {
       setPendingWildCard(card)
@@ -66,6 +67,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   function handleDraw() {
     if (!isMyTurn) return
     if (myChallenge) return
+    if (isMultiPlay) return // must Selesai or play more
     drawCard(game.id, playerId)
   }
 
@@ -156,6 +158,20 @@ export default function Game({ game, playerId, onBack }: GameProps) {
         )}
       </AnimatePresence>
 
+      {/* Multi-play banner */}
+      <AnimatePresence>
+        {isMultiPlay && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-center text-green-300 text-xs py-1.5 bg-green-900/30 font-bold"
+          >
+            🃏 Multi-play! Main lagi kad {game.multiPlayType} atau tekan Selesai.
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Other players */}
       <div className="flex flex-wrap justify-center gap-3 p-3">
         {otherPlayers.map(({ id, player, cardCount, isCurrentTurn, hasUnoPending }) => (
@@ -213,7 +229,20 @@ export default function Game({ game, playerId, onBack }: GameProps) {
       {/* My hand label */}
       <div className="flex items-center justify-between px-4 pb-1">
         <span className="text-white/40 text-xs">Kad kau ({myHand.length})</span>
-        <UnoButton onUno={handleUno} canCallUno={canCallUno} />
+        <div className="flex items-center gap-2">
+          {isMultiPlay && (
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => passMultiPlay(game.id, playerId)}
+              className="bg-green-600 hover:bg-green-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
+            >
+              Selesai ✓
+            </motion.button>
+          )}
+          <UnoButton onUno={handleUno} canCallUno={canCallUno} />
+        </div>
       </div>
 
       {/* My hand */}
@@ -225,6 +254,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
           currentColor={game.currentColor}
           pendingStack={game.pendingStack}
           gameMode={game.gameMode}
+          multiPlayType={game.multiPlayType}
           onPlay={handlePlay}
         />
       </div>

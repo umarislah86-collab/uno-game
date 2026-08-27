@@ -1,4 +1,4 @@
-import type { Card, CardColor, GameMode, GameState } from './types'
+import type { Card, CardColor, CardType, GameMode, GameState } from './types'
 import { drawCards, reshuffleDeck } from './deck'
 
 export function isPlayable(
@@ -6,8 +6,13 @@ export function isPlayable(
   topCard: Card,
   currentColor: CardColor,
   pendingStack = 0,
-  gameMode: GameMode = 'standard'
+  gameMode: GameMode = 'standard',
+  multiPlayType: CardType | null = null
 ): boolean {
+  // Multi-play active: only same-type cards allowed
+  if (multiPlayType !== null) {
+    return card.type === multiPlayType
+  }
   // Mamak stacking: only draw cards playable when stack pending
   if (gameMode === 'mamak' && pendingStack > 0) {
     return card.type === 'draw2' || card.type === 'wild4'
@@ -59,6 +64,7 @@ export function applyPlayCard(
     newState.unoPendingCall = null
     newState.pendingStack = 0
     newState.wild4Challenge = null
+    newState.multiPlayType = null
     return newState
   }
 
@@ -146,6 +152,16 @@ export function applyPlayCard(
     }
 
     default: {
+      if (isMamak) {
+        // Multi-play: if player still has same-type cards, keep their turn
+        const sameTypeLeft = newState.hands[playerId].filter(c => c.type === card.type)
+        if (sameTypeLeft.length > 0) {
+          newState.multiPlayType = card.type
+          newState.lastAction = `${newState.players[playerId].name} played ${card.color} ${card.type} — ada lagi!`
+          break
+        }
+      }
+      newState.multiPlayType = null
       newState.currentPlayerIndex = getNextPlayerIndex(newState)
       newState.lastAction = `${newState.players[playerId].name} played ${card.color} ${card.type}`
       break
@@ -158,6 +174,9 @@ export function applyPlayCard(
 export function applyDrawCard(state: GameState, playerId: string): GameState {
   const newState = deepClone(state)
   const isMamak = newState.gameMode === 'mamak'
+
+  // Can't draw during multi-play (shouldn't happen, but guard anyway)
+  newState.multiPlayType = null
 
   if (isMamak && newState.pendingStack > 0) {
     // Draw the full accumulated penalty
@@ -224,6 +243,15 @@ export function applyWild4Challenge(
 
   newState.wild4Challenge = null
   newState.unoPendingCall = null
+  return newState
+}
+
+export function applyPassMultiPlay(state: GameState): GameState {
+  const newState = deepClone(state)
+  const playerId = newState.playerOrder[newState.currentPlayerIndex]
+  newState.multiPlayType = null
+  newState.currentPlayerIndex = getNextPlayerIndex(newState)
+  newState.lastAction = `${newState.players[playerId].name} selesai main.`
   return newState
 }
 

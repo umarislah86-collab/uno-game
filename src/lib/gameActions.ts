@@ -10,7 +10,7 @@ import {
 import { db } from './firebase'
 import type { Card, CardColor, GameMode, GameState, Player } from './types'
 import { createDeck, dealHands, drawCards, reshuffleDeck } from './deck'
-import { applyDrawCard, applyPlayCard, applyWild4Challenge } from './gameLogic'
+import { applyDrawCard, applyPassMultiPlay, applyPlayCard, applyWild4Challenge } from './gameLogic'
 
 const gamesCol = collection(db, 'uno_games')
 
@@ -50,6 +50,7 @@ export async function createGame(
     pendingStack: 0,
     unoPendingCall: null,
     wild4Challenge: null,
+    multiPlayType: null,
   }
   await setDoc(gameRef(roomId), state)
 }
@@ -93,6 +94,7 @@ export async function startGame(roomId: string): Promise<void> {
     pendingStack: 0,
     unoPendingCall: null,
     wild4Challenge: null,
+    multiPlayType: null,
   })
 }
 
@@ -160,6 +162,16 @@ export async function resolveWild4Challenge(
   const state = snap.data() as GameState
   if (!state.wild4Challenge || state.wild4Challenge.victimId !== victimId) return
   const newState = applyWild4Challenge(state, victimId, doChallenge)
+  await updateDoc(gameRef(roomId), newState as unknown as Record<string, unknown>)
+}
+
+export async function passMultiPlay(roomId: string, playerId: string): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (state.playerOrder[state.currentPlayerIndex] !== playerId) return
+  if (!state.multiPlayType) return
+  const newState = applyPassMultiPlay(state)
   await updateDoc(gameRef(roomId), newState as unknown as Record<string, unknown>)
 }
 

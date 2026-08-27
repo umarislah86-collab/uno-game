@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import type { Card, CardColor, GameMode } from '../lib/types'
+import type { Card, CardColor, CardType, GameMode } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
 import CardSvg from './CardSvg'
 
@@ -10,6 +10,7 @@ interface HandProps {
   currentColor: CardColor
   pendingStack?: number
   gameMode?: GameMode
+  multiPlayType?: CardType | null
   onPlay: (card: Card) => void
 }
 
@@ -20,13 +21,14 @@ export default function Hand({
   currentColor,
   pendingStack = 0,
   gameMode = 'standard',
+  multiPlayType = null,
   onPlay,
 }: HandProps) {
   return (
     <div className="flex items-end justify-center gap-1 flex-wrap px-2 pb-2">
       <AnimatePresence>
         {cards.map((card, i) => {
-          const playable = isMyTurn && isPlayable(card, topCard, currentColor, pendingStack, gameMode)
+          const playable = isMyTurn && isPlayable(card, topCard, currentColor, pendingStack, gameMode, multiPlayType)
           return (
             <motion.div
               key={card.id}

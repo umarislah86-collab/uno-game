@@ -71,6 +71,14 @@ const mamakRules = [
     ],
   },
   {
+    title: 'Multi-Play (Nombor Sama)',
+    items: [
+      'Kalau kau main kad nombor (contoh: 7 Kuning), dan masih ada kad nombor 7 lain dalam tangan — kau boleh terus main dalam giliran yang sama!',
+      'Contoh: Ada 7 Merah, 7 Hijau, 7 Merah — boleh main ketiga-tiga sekali gus.',
+      'Tekan "Selesai ✓" bila dah tak nak main lagi.',
+    ],
+  },
+  {
     title: 'Tangkap UNO!',
     items: [
       'Bila seseorang ada tinggal 1 kad, butang "Tangkap!" muncul kat nama dia.',
@@ -190,7 +198,10 @@ export default function RulesModal({ onClose, gameMode = 'standard' }: RulesModa
               </h3>
               <div className="bg-white/5 rounded-xl p-3 flex flex-col gap-1.5 text-sm text-white/70">
                 {isMamak && (
-                  <p className="text-orange-300">⚠️ Bila stack aktif: HANYA +2 atau +4!</p>
+                  <>
+                    <p className="text-orange-300">⚠️ Bila stack aktif: HANYA +2 atau +4!</p>
+                    <p className="text-green-300">🃏 Bila multi-play aktif: HANYA kad nombor yang sama!</p>
+                  </>
                 )}
                 <p>✅ Warna sama dengan kad atas</p>
                 <p>✅ Jenis/nombor sama (contoh: Skip atas Skip)</p>
