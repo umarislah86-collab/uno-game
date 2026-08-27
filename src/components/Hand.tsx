@@ -25,38 +25,50 @@ export default function Hand({
   onPlay,
 }: HandProps) {
   return (
-    <div className="flex items-end justify-center gap-1 flex-wrap px-2 pb-2">
-      <AnimatePresence>
-        {cards.map((card, i) => {
-          const playable = isMyTurn && isPlayable(card, topCard, currentColor, pendingStack, gameMode, multiPlayType)
-          return (
-            <motion.div
-              key={card.id}
-              initial={{ scale: 0, y: 40, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0, y: -30, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20, delay: i * 0.04 }}
-              whileHover={playable ? { y: -14, scale: 1.12 } : {}}
-              className="relative"
-            >
-              <CardSvg
-                card={card}
-                onClick={playable ? () => onPlay(card) : undefined}
-                disabled={!playable}
-                highlighted={playable}
-                className={!playable ? 'opacity-60' : ''}
-              />
-              {playable && (
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-1 rounded-full bg-white"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 1.2 }}
+    // Outer wrapper: clip x-overflow but leave room for hover-lift above
+    <div
+      className="overflow-x-auto pb-2"
+      style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' as never }}
+    >
+      {/* Inner row: padTop gives room for hover lift, px guards edges */}
+      <div
+        className="flex items-end px-3"
+        style={{ paddingTop: 20, minWidth: 'max-content' }}
+      >
+        <AnimatePresence initial={false}>
+          {cards.map((card, i) => {
+            const playable = isMyTurn && isPlayable(card, topCard, currentColor, pendingStack, gameMode, multiPlayType)
+            return (
+              <motion.div
+                key={card.id}
+                layout
+                initial={{ y: -70, x: -50, scale: 0.6, opacity: 0 }}
+                animate={{ y: 0, x: 0, scale: 1, opacity: 1 }}
+                exit={{ y: -120, scale: 0.5, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 24, delay: 0 }}
+                whileHover={playable ? { y: -14, scale: 1.1, zIndex: 50 } : {}}
+                style={{ marginLeft: i === 0 ? 0 : -10, zIndex: i, position: 'relative' }}
+              >
+                <CardSvg
+                  card={card}
+                  small
+                  onClick={playable ? () => onPlay(card) : undefined}
+                  disabled={!playable}
+                  highlighted={playable}
+                  className={!playable ? 'opacity-55' : ''}
                 />
-              )}
-            </motion.div>
-          )
-        })}
-      </AnimatePresence>
+                {playable && (
+                  <motion.div
+                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-white"
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ repeat: Infinity, duration: 1.2 }}
+                  />
+                )}
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
