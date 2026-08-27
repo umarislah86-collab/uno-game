@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import type { Card, CardColor, GameState } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
 import { callUno, catchUno, drawCard, passMultiPlay, reshuffleDraw, playCard } from '../lib/gameActions'
@@ -81,6 +81,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   }
 
   return (
+    <LayoutGroup id="game-cards">
     <div className="min-h-screen bg-[#1a1a2e] flex flex-col overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-black/20">
@@ -289,6 +290,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
       {/* Rules modal */}
       {showRules && <RulesModal onClose={() => setShowRules(false)} gameMode={game.gameMode} />}
     </div>
+    </LayoutGroup>
   )
 }
 

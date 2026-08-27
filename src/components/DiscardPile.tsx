@@ -7,7 +7,6 @@ interface DiscardPileProps {
 }
 
 export default function DiscardPile({ topCard }: DiscardPileProps) {
-  // Deterministic small rotation per card so the pile looks natural
   const rotation = topCard
     ? ((topCard.id.charCodeAt(0) + topCard.id.charCodeAt(1)) % 22) - 11
     : 0
@@ -20,8 +19,9 @@ export default function DiscardPile({ topCard }: DiscardPileProps) {
           {topCard ? (
             <motion.div
               key={topCard.id}
-              initial={{ y: -60, scale: 1.2, rotate: rotation + 20, opacity: 0.7 }}
-              animate={{ y: 0, scale: 1, rotate: rotation, opacity: 1 }}
+              layoutId={topCard.id}
+              initial={{ scale: 1.15, rotate: rotation + 18 }}
+              animate={{ scale: 1, rotate: rotation }}
               exit={{ scale: 0.85, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 380, damping: 22 }}
               style={{ position: 'absolute' }}

@@ -41,11 +41,12 @@ export default function Hand({
             return (
               <motion.div
                 key={card.id}
-                layout
-                initial={{ y: -70, x: -50, scale: 0.6, opacity: 0 }}
-                animate={{ y: 0, x: 0, scale: 1, opacity: 1 }}
-                exit={{ y: -120, scale: 0.5, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 24, delay: 0 }}
+                layoutId={card.id}
+                layout="position"
+                initial={{ scale: 0.6, opacity: 0, x: -40 }}
+                animate={{ scale: 1, opacity: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 24 }}
                 whileHover={playable ? { y: -14, scale: 1.1, zIndex: 50 } : {}}
                 style={{ marginLeft: i === 0 ? 0 : -10, zIndex: i, position: 'relative' }}
               >
