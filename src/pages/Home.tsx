@@ -184,7 +184,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) 
         )}
       </motion.div>
 
-      <p className="text-white/20 text-xs mt-6">2–6 players</p>
+      <p className="text-white/20 text-xs mt-6">2–6 players · <span className="text-white/30">umartm</span></p>
 
       <button
         onClick={() => setShowRules(true)}

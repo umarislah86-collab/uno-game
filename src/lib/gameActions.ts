@@ -10,7 +10,7 @@ import {
 import { db } from './firebase'
 import type { Card, CardColor, GameMode, GameState, Player } from './types'
 import { createDeck, dealHands, drawCards, reshuffleDeck } from './deck'
-import { applyDrawCard, applyPassMultiPlay, applyPlayCard, applyWild4Challenge } from './gameLogic'
+import { applyDrawCard, applyPassDraw, applyPassMultiPlay, applyPlayCard, applyWild4Challenge } from './gameLogic'
 
 const gamesCol = collection(db, 'uno_games')
 
@@ -51,6 +51,7 @@ export async function createGame(
     unoPendingCall: null,
     wild4Challenge: null,
     multiPlayType: null,
+    mamakDrawPhase: null,
   }
   await setDoc(gameRef(roomId), state)
 }
@@ -95,6 +96,7 @@ export async function startGame(roomId: string): Promise<void> {
     unoPendingCall: null,
     wild4Challenge: null,
     multiPlayType: null,
+    mamakDrawPhase: null,
   })
 }
 
@@ -173,6 +175,29 @@ export async function passMultiPlay(roomId: string, playerId: string): Promise<v
   if (!state.multiPlayType) return
   const newState = applyPassMultiPlay(state)
   await updateDoc(gameRef(roomId), newState as unknown as Record<string, unknown>)
+}
+
+export async function passDraw(roomId: string, playerId: string): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (state.playerOrder[state.currentPlayerIndex] !== playerId) return
+  if (!state.mamakDrawPhase) return
+  const newState = applyPassDraw(state)
+  await updateDoc(gameRef(roomId), newState as unknown as Record<string, unknown>)
+}
+
+export async function reshuffleDraw(roomId: string): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (state.deck.length < 2) return
+  const deck = [...state.deck]
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[deck[i], deck[j]] = [deck[j], deck[i]]
+  }
+  await updateDoc(gameRef(roomId), { deck, lastAction: '🔀 Deck dikocok semula!' })
 }
 
 export async function leaveGame(roomId: string, playerId: string): Promise<void> {

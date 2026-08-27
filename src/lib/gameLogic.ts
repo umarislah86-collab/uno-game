@@ -56,6 +56,9 @@ export function applyPlayCard(
     ? (chosenColor ?? 'red')
     : card.color
 
+  // Playing a card always ends draw phase
+  newState.mamakDrawPhase = null
+
   // Check win
   if (newState.hands[playerId].length === 0) {
     newState.winner = playerId
@@ -65,6 +68,7 @@ export function applyPlayCard(
     newState.pendingStack = 0
     newState.wild4Challenge = null
     newState.multiPlayType = null
+    newState.mamakDrawPhase = null
     return newState
   }
 
@@ -179,24 +183,42 @@ export function applyDrawCard(state: GameState, playerId: string): GameState {
   newState.multiPlayType = null
 
   if (isMamak && newState.pendingStack > 0) {
-    // Draw the full accumulated penalty
+    // Draw full accumulated penalty — turn advances
     const amount = newState.pendingStack
     const { drawn, remaining } = ensureDeck(newState, amount)
     newState.deck = remaining
     newState.hands[playerId] = [...newState.hands[playerId], ...drawn]
     newState.pendingStack = 0
+    newState.mamakDrawPhase = null
     newState.currentPlayerIndex = getNextPlayerIndex(newState)
     newState.lastAction = `${newState.players[playerId].name} drew ${amount} cards!`
+  } else if (isMamak) {
+    // Mamak draw-until-playable: draw 1 card, turn stays
+    const { drawn, remaining } = ensureDeck(newState, 1)
+    newState.deck = remaining
+    newState.hands[playerId] = [...newState.hands[playerId], ...drawn]
+    newState.mamakDrawPhase = playerId
+    newState.lastAction = `${newState.players[playerId].name} ambik kad...`
   } else {
     const { drawn, remaining } = ensureDeck(newState, 1)
     newState.deck = remaining
     newState.hands[playerId] = [...newState.hands[playerId], ...drawn]
+    newState.mamakDrawPhase = null
     newState.currentPlayerIndex = getNextPlayerIndex(newState)
     newState.lastAction = `${newState.players[playerId].name} drew a card`
   }
 
   // Drawing clears UNO pending for others
   newState.unoPendingCall = null
+  return newState
+}
+
+export function applyPassDraw(state: GameState): GameState {
+  const newState = deepClone(state)
+  const playerId = newState.playerOrder[newState.currentPlayerIndex]
+  newState.mamakDrawPhase = null
+  newState.currentPlayerIndex = getNextPlayerIndex(newState)
+  newState.lastAction = `${newState.players[playerId].name} pass.`
   return newState
 }
 
@@ -243,6 +265,7 @@ export function applyWild4Challenge(
 
   newState.wild4Challenge = null
   newState.unoPendingCall = null
+  newState.mamakDrawPhase = null
   return newState
 }
 

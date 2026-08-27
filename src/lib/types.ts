@@ -44,8 +44,9 @@ export interface GameState {
   lastAction: string | null
   // mamak / mode fields
   gameMode: GameMode
-  pendingStack: number          // accumulated draw cards (stacking)
-  unoPendingCall: string | null // playerId who has 1 card and hasn't called UNO
+  pendingStack: number
+  unoPendingCall: string | null
   wild4Challenge: Wild4Challenge | null
-  multiPlayType: CardType | null  // active same-number multi-play (mamak)
+  multiPlayType: CardType | null
+  mamakDrawPhase: string | null  // playerId drawing one-by-one until playable found
 }
