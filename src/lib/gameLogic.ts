@@ -78,28 +78,51 @@ export function applyPlayCard(
   }
 
   const playerCount = newState.playerOrder.length
+  const myIdx = newState.playerOrder.indexOf(playerId)
 
   switch (card.type) {
     case 'skip': {
       const skipped = getNextPlayerIndex(newState)
-      newState.currentPlayerIndex = ((skipped + newState.direction) + playerCount) % playerCount
-      newState.lastAction = `${newState.players[playerId].name} played Skip!`
+      const afterSkip = ((skipped + newState.direction) + playerCount) % playerCount
+      if (isMamak && newState.hands[playerId].some(c => c.type === 'skip')) {
+        newState.currentPlayerIndex = myIdx
+        newState.multiPlayType = 'skip'
+        newState.lastAction = `${newState.players[playerId].name} played Skip! Ada lagi!`
+      } else {
+        newState.currentPlayerIndex = afterSkip
+        newState.multiPlayType = null
+        newState.lastAction = `${newState.players[playerId].name} played Skip!`
+      }
       break
     }
 
     case 'reverse': {
       newState.direction = (newState.direction * -1) as 1 | -1
-      newState.currentPlayerIndex = getNextPlayerIndex(newState)
-      newState.lastAction = `${newState.players[playerId].name} played Reverse!`
+      const nextAfterReverse = getNextPlayerIndex(newState)
+      if (isMamak && newState.hands[playerId].some(c => c.type === 'reverse')) {
+        newState.currentPlayerIndex = myIdx
+        newState.multiPlayType = 'reverse'
+        newState.lastAction = `${newState.players[playerId].name} played Reverse! Ada lagi!`
+      } else {
+        newState.currentPlayerIndex = nextAfterReverse
+        newState.multiPlayType = null
+        newState.lastAction = `${newState.players[playerId].name} played Reverse!`
+      }
       break
     }
 
     case 'draw2': {
       if (isMamak) {
-        // Stacking: add to pendingStack, next player must stack or draw all
         newState.pendingStack += 2
-        newState.currentPlayerIndex = getNextPlayerIndex(newState)
-        newState.lastAction = `${newState.players[playerId].name} stacked +2! (Total: +${newState.pendingStack})`
+        if (newState.hands[playerId].some(c => c.type === 'draw2')) {
+          newState.currentPlayerIndex = myIdx
+          newState.multiPlayType = 'draw2'
+          newState.lastAction = `${newState.players[playerId].name} stacked +2! (Total: +${newState.pendingStack}) Ada lagi!`
+        } else {
+          newState.multiPlayType = null
+          newState.currentPlayerIndex = getNextPlayerIndex(newState)
+          newState.lastAction = `${newState.players[playerId].name} stacked +2! (Total: +${newState.pendingStack})`
+        }
       } else {
         const nextIdx = getNextPlayerIndex(newState)
         const nextId = newState.playerOrder[nextIdx]
@@ -116,11 +139,10 @@ export function applyPlayCard(
       if (isMamak) {
         newState.pendingStack += 4
         newState.wild4Challenge = null
-        // Multi-play: if player still has more wild4, keep their turn
-        const moreWild4 = newState.hands[playerId].filter(c => c.type === 'wild4')
-        if (moreWild4.length > 0) {
+        if (newState.hands[playerId].some(c => c.type === 'wild4')) {
+          newState.currentPlayerIndex = myIdx
           newState.multiPlayType = 'wild4'
-          newState.lastAction = `${newState.players[playerId].name} stacked +4! (Total: +${newState.pendingStack}) — ada lagi!`
+          newState.lastAction = `${newState.players[playerId].name} stacked +4! (Total: +${newState.pendingStack}) Ada lagi!`
         } else {
           newState.multiPlayType = null
           newState.currentPlayerIndex = getNextPlayerIndex(newState)
@@ -146,9 +168,9 @@ export function applyPlayCard(
 
     default: {
       if (isMamak) {
-        // Multi-play: if player still has same-type cards, keep their turn
         const sameTypeLeft = newState.hands[playerId].filter(c => c.type === card.type)
         if (sameTypeLeft.length > 0) {
+          newState.currentPlayerIndex = myIdx
           newState.multiPlayType = card.type
           newState.lastAction = `${newState.players[playerId].name} played ${card.color} ${card.type} — ada lagi!`
           break
