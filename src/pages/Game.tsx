@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Card, CardColor, GameState } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
-import { drawCard, playCard } from '../lib/gameActions'
+import { callUno, catchUno, drawCard, playCard, resolveWild4Challenge } from '../lib/gameActions'
 import Hand from '../components/Hand'
 import DiscardPile from '../components/DiscardPile'
 import DrawPile from '../components/DrawPile'
@@ -22,10 +22,16 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   const [unoCalled, setUnoCalled] = useState(false)
   const [showRules, setShowRules] = useState(false)
 
+  const isMamak = game.gameMode === 'mamak'
   const myHand = game.hands[playerId] ?? []
   const topCard = game.discardPile[game.discardPile.length - 1] ?? null
   const currentPlayerId = game.playerOrder[game.currentPlayerIndex]
   const isMyTurn = currentPlayerId === playerId
+
+  // Wild4 challenge: is it my turn to decide?
+  const myChallenge = isMamak && game.wild4Challenge?.victimId === playerId
+    ? game.wild4Challenge
+    : null
 
   // Other players (not me)
   const otherPlayers = game.playerOrder
@@ -35,11 +41,13 @@ export default function Game({ game, playerId, onBack }: GameProps) {
       player: game.players[id],
       cardCount: (game.hands[id] ?? []).length,
       isCurrentTurn: game.playerOrder[game.currentPlayerIndex] === id,
+      hasUnoPending: isMamak && game.unoPendingCall === id,
     }))
 
   function handlePlay(card: Card) {
     if (!isMyTurn) return
-    if (!isPlayable(card, topCard, game.currentColor)) return
+    if (myChallenge) return // must resolve challenge first
+    if (!isPlayable(card, topCard, game.currentColor, game.pendingStack, game.gameMode)) return
 
     if (card.type === 'wild' || card.type === 'wild4') {
       setPendingWildCard(card)
@@ -57,15 +65,18 @@ export default function Game({ game, playerId, onBack }: GameProps) {
 
   function handleDraw() {
     if (!isMyTurn) return
+    if (myChallenge) return
     drawCard(game.id, playerId)
   }
 
   function handleUno() {
     setUnoCalled(true)
     setTimeout(() => setUnoCalled(false), 3000)
+    if (isMamak) callUno(game.id, playerId)
   }
 
   const canCallUno = myHand.length === 2 && isMyTurn && !unoCalled
+  const showStackWarning = isMamak && game.pendingStack > 0 && isMyTurn && !myChallenge
 
   if (game.status === 'finished') {
     return <WinScreen game={game} playerId={playerId} onBack={onBack} />
@@ -92,6 +103,9 @@ export default function Game({ game, playerId, onBack }: GameProps) {
           <span className="text-white/30 text-xs ml-2">
             {game.direction === 1 ? '→' : '←'} Room: {game.id}
           </span>
+          {isMamak && (
+            <span className="text-orange-400/70 text-xs ml-1">🥤</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {unoCalled && (
@@ -128,17 +142,44 @@ export default function Game({ game, playerId, onBack }: GameProps) {
         )}
       </AnimatePresence>
 
+      {/* Mamak stack warning */}
+      <AnimatePresence>
+        {showStackWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-center text-orange-300 text-xs py-1.5 bg-orange-900/30 font-bold"
+          >
+            ⚠️ Stack aktif! Kena main +2/+4 atau draw +{game.pendingStack} kad!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Other players */}
       <div className="flex flex-wrap justify-center gap-3 p-3">
-        {otherPlayers.map(({ id, player, cardCount, isCurrentTurn }) => (
-          <PlayerSeat
-            key={id}
-            name={player?.name ?? 'Player'}
-            cardCount={cardCount}
-            isCurrentTurn={isCurrentTurn}
-            isMe={false}
-            isConnected={player?.isConnected ?? false}
-          />
+        {otherPlayers.map(({ id, player, cardCount, isCurrentTurn, hasUnoPending }) => (
+          <div key={id} className="relative">
+            <PlayerSeat
+              name={player?.name ?? 'Player'}
+              cardCount={cardCount}
+              isCurrentTurn={isCurrentTurn}
+              isMe={false}
+              isConnected={player?.isConnected ?? false}
+            />
+            {/* Tangkap UNO button (mamak only) */}
+            {hasUnoPending && (
+              <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => catchUno(game.id, id)}
+                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white text-xs font-black px-2 py-0.5 rounded-full shadow-lg z-10"
+              >
+                Tangkap!
+              </motion.button>
+            )}
+          </div>
         ))}
       </div>
 
@@ -147,7 +188,7 @@ export default function Game({ game, playerId, onBack }: GameProps) {
         <DrawPile
           count={game.deck.length}
           onDraw={handleDraw}
-          canDraw={isMyTurn}
+          canDraw={isMyTurn && !myChallenge}
         />
         <DiscardPile topCard={topCard} />
       </div>
@@ -179,9 +220,11 @@ export default function Game({ game, playerId, onBack }: GameProps) {
       <div className="pb-4 min-h-[120px]">
         <Hand
           cards={myHand}
-          isMyTurn={isMyTurn}
+          isMyTurn={isMyTurn && !myChallenge}
           topCard={topCard}
           currentColor={game.currentColor}
+          pendingStack={game.pendingStack}
+          gameMode={game.gameMode}
           onPlay={handlePlay}
         />
       </div>
@@ -193,8 +236,54 @@ export default function Game({ game, playerId, onBack }: GameProps) {
         )}
       </AnimatePresence>
 
+      {/* Wild +4 Challenge modal (mamak only) */}
+      <AnimatePresence>
+        {myChallenge && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.85 }}
+              animate={{ scale: 1 }}
+              className="bg-[#16213e] border border-orange-500/30 rounded-2xl p-6 w-full max-w-xs text-center"
+            >
+              <div className="text-4xl mb-3">🃏</div>
+              <h3 className="text-white font-black text-xl mb-1">Wild +4 Dimain!</h3>
+              <p className="text-white/50 text-sm mb-1">
+                {game.players[myChallenge.attackerId]?.name} main Wild +4
+              </p>
+              <p className="text-orange-300 text-sm mb-5">
+                Challenge atau terima +{game.pendingStack} kad?
+              </p>
+              <div className="flex flex-col gap-3">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => resolveWild4Challenge(game.id, playerId, true)}
+                  className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition"
+                >
+                  ⚔️ Challenge!
+                  <span className="block text-xs font-normal text-orange-200 mt-0.5">
+                    (Kalau dia ada kad warna {game.currentColor}, dia draw 4)
+                  </span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => resolveWild4Challenge(game.id, playerId, false)}
+                  className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl transition"
+                >
+                  Terima (+{game.pendingStack} kad)
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Rules modal */}
-      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+      {showRules && <RulesModal onClose={() => setShowRules(false)} gameMode={game.gameMode} />}
     </div>
   )
 }

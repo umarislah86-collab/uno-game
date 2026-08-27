@@ -5,6 +5,8 @@ export type CardType =
   | 'skip' | 'reverse' | 'draw2'
   | 'wild' | 'wild4'
 
+export type GameMode = 'standard' | 'mamak'
+
 export interface Card {
   id: string
   color: CardColor
@@ -18,6 +20,12 @@ export interface Player {
 }
 
 export type GameStatus = 'lobby' | 'playing' | 'finished'
+
+export interface Wild4Challenge {
+  attackerId: string
+  victimId: string
+  attackerHadMatchingColor: boolean
+}
 
 export interface GameState {
   id: string
@@ -34,4 +42,9 @@ export interface GameState {
   pendingDraw: number
   winner: string | null
   lastAction: string | null
+  // mamak / mode fields
+  gameMode: GameMode
+  pendingStack: number          // accumulated draw cards (stacking)
+  unoPendingCall: string | null // playerId who has 1 card and hasn't called UNO
+  wild4Challenge: Wild4Challenge | null
 }

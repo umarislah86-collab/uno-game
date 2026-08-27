@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { createGame, joinGame } from '../lib/gameActions'
 import { usePlayer } from '../hooks/usePlayer'
 import RulesModal from '../components/RulesModal'
+import type { GameMode } from '../lib/types'
 
 interface HomeProps {
   onEnterRoom: (roomId: string) => void
@@ -17,6 +18,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showRules, setShowRules] = useState(false)
+  const [gameMode, setGameMode] = useState<GameMode>('standard')
 
   function genRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase()
@@ -29,7 +31,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) 
     setError('')
     const roomId = genRoomCode()
     setPlayerName(name)
-    await createGame(roomId, playerId, name)
+    await createGame(roomId, playerId, name, gameMode)
     onEnterRoom(roomId)
     setLoading(false)
   }
@@ -99,6 +101,40 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId }: HomeProps) 
             maxLength={20}
             className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 outline-none focus:border-red-500 transition"
           />
+        </div>
+
+        {/* Game mode picker */}
+        <div>
+          <label className="text-white/60 text-xs uppercase tracking-wider block mb-2">Mod Permainan</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setGameMode('standard')}
+              className={[
+                'py-2.5 rounded-xl text-sm font-bold transition border',
+                gameMode === 'standard'
+                  ? 'bg-red-600 border-red-500 text-white'
+                  : 'bg-white/5 border-white/10 text-white/50 hover:text-white/80',
+              ].join(' ')}
+            >
+              Standard
+            </button>
+            <button
+              onClick={() => setGameMode('mamak')}
+              className={[
+                'py-2.5 rounded-xl text-sm font-bold transition border',
+                gameMode === 'mamak'
+                  ? 'bg-orange-600 border-orange-500 text-white'
+                  : 'bg-white/5 border-white/10 text-white/50 hover:text-white/80',
+              ].join(' ')}
+            >
+              🥤 Mamak Style
+            </button>
+          </div>
+          {gameMode === 'mamak' && (
+            <p className="text-orange-400/70 text-xs mt-1.5">
+              Stack +2/+4 · Tangkap UNO · Challenge Wild +4
+            </p>
+          )}
         </div>
 
         {/* Create room */}

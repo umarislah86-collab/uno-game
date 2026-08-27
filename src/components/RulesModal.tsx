@@ -1,7 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import type { GameMode } from '../lib/types'
 
 interface RulesModalProps {
   onClose: () => void
+  gameMode?: GameMode
 }
 
 const COLOR_DOT: Record<string, string> = {
@@ -11,7 +13,7 @@ const COLOR_DOT: Record<string, string> = {
   yellow: '#FFCC00',
 }
 
-const rules = [
+const standardRules = [
   {
     title: 'Cara Main',
     items: [
@@ -44,7 +46,43 @@ const rules = [
   },
 ]
 
-export default function RulesModal({ onClose }: RulesModalProps) {
+const mamakRules = [
+  {
+    title: '🥤 Mamak Style Rules',
+    items: [
+      'Semua peraturan Standard terpakai, ditambah house rules di bawah.',
+    ],
+  },
+  {
+    title: 'Stack +2 / +4',
+    items: [
+      'Kalau kau kena +2 atau +4, kau boleh stack kad +2 atau +4 untuk pass penalty ke pemain seterusnya.',
+      'Penalty berkumpul sehingga ada pemain yang tak boleh stack — pemain tu kena draw semua.',
+      'Contoh: A main +2 → B stack +4 → C stack +2 → D kena draw 8 kad!',
+    ],
+  },
+  {
+    title: 'Challenge Wild +4',
+    items: [
+      'Bila seseorang main Wild +4, kau boleh Challenge sebelum draw.',
+      'Kalau dia memang ada kad warna semasa → Challenge berjaya, dia draw 4.',
+      'Kalau dia betul-betul takde kad → Challenge gagal, kau draw pendingStack + 2.',
+      'Kalau kau terima (tak challenge) → kau draw pendingStack.',
+    ],
+  },
+  {
+    title: 'Tangkap UNO!',
+    items: [
+      'Bila seseorang ada tinggal 1 kad, butang "Tangkap!" muncul kat nama dia.',
+      'Tekan Tangkap! sebelum giliran seterusnya — dia kena draw 2 penalty.',
+      'Kalau dia tekan UNO! dulu, butang Tangkap! hilang — dia selamat.',
+    ],
+  },
+]
+
+export default function RulesModal({ onClose, gameMode = 'standard' }: RulesModalProps) {
+  const isMamak = gameMode === 'mamak'
+
   return (
     <AnimatePresence>
       <motion.div
@@ -68,7 +106,7 @@ export default function RulesModal({ onClose }: RulesModalProps) {
               className="text-white font-black text-2xl"
               style={{ fontFamily: 'Arial Black, sans-serif' }}
             >
-              Peraturan UNO
+              {isMamak ? '🥤 Mamak UNO' : 'Peraturan UNO'}
             </h2>
             <button
               onClick={onClose}
@@ -89,12 +127,12 @@ export default function RulesModal({ onClose }: RulesModalProps) {
           </div>
 
           <div className="flex flex-col gap-5">
-            {rules.map(section => (
+            {/* Standard rules always shown */}
+            {standardRules.map(section => (
               <div key={section.title}>
                 <h3 className="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-2">
                   {section.title}
                 </h3>
-
                 {section.items && (
                   <ul className="flex flex-col gap-1">
                     {section.items.map(item => (
@@ -105,7 +143,6 @@ export default function RulesModal({ onClose }: RulesModalProps) {
                     ))}
                   </ul>
                 )}
-
                 {section.cards && (
                   <div className="flex flex-col gap-2">
                     {section.cards.map(card => (
@@ -124,12 +161,37 @@ export default function RulesModal({ onClose }: RulesModalProps) {
               </div>
             ))}
 
+            {/* Mamak extra rules */}
+            {isMamak && (
+              <>
+                <div className="h-px bg-orange-500/30" />
+                {mamakRules.map(section => (
+                  <div key={section.title}>
+                    <h3 className="text-orange-400 text-xs font-bold uppercase tracking-widest mb-2">
+                      {section.title}
+                    </h3>
+                    <ul className="flex flex-col gap-1">
+                      {section.items.map(item => (
+                        <li key={item} className="text-white/70 text-sm flex gap-2">
+                          <span className="text-orange-400/50 mt-0.5">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </>
+            )}
+
             {/* Playable card rules summary */}
             <div>
               <h3 className="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-2">
                 Kad Yang Boleh Dimain
               </h3>
               <div className="bg-white/5 rounded-xl p-3 flex flex-col gap-1.5 text-sm text-white/70">
+                {isMamak && (
+                  <p className="text-orange-300">⚠️ Bila stack aktif: HANYA +2 atau +4!</p>
+                )}
                 <p>✅ Warna sama dengan kad atas</p>
                 <p>✅ Jenis/nombor sama (contoh: Skip atas Skip)</p>
                 <p>✅ Wild / Wild +4 — boleh dimain bila-bila masa</p>
@@ -140,7 +202,10 @@ export default function RulesModal({ onClose }: RulesModalProps) {
 
           <button
             onClick={onClose}
-            className="mt-5 w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl transition text-sm"
+            className={[
+              'mt-5 w-full text-white font-bold py-2.5 rounded-xl transition text-sm',
+              isMamak ? 'bg-orange-600 hover:bg-orange-500' : 'bg-red-600 hover:bg-red-500',
+            ].join(' ')}
           >
             Faham!
           </button>

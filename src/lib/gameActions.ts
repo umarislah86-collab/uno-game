@@ -8,9 +8,9 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
-import type { Card, CardColor, GameState, Player } from './types'
-import { createDeck, dealHands } from './deck'
-import { applyDrawCard, applyPlayCard } from './gameLogic'
+import type { Card, CardColor, GameMode, GameState, Player } from './types'
+import { createDeck, dealHands, drawCards, reshuffleDeck } from './deck'
+import { applyDrawCard, applyPlayCard, applyWild4Challenge } from './gameLogic'
 
 const gamesCol = collection(db, 'uno_games')
 
@@ -24,7 +24,12 @@ export function subscribeGame(id: string, cb: (state: GameState | null) => void)
   })
 }
 
-export async function createGame(roomId: string, hostId: string, hostName: string): Promise<void> {
+export async function createGame(
+  roomId: string,
+  hostId: string,
+  hostName: string,
+  gameMode: GameMode = 'standard'
+): Promise<void> {
   const player: Player = { id: hostId, name: hostName, isConnected: true }
   const state: GameState = {
     id: roomId,
@@ -41,6 +46,10 @@ export async function createGame(roomId: string, hostId: string, hostName: strin
     pendingDraw: 0,
     winner: null,
     lastAction: null,
+    gameMode,
+    pendingStack: 0,
+    unoPendingCall: null,
+    wild4Challenge: null,
   }
   await setDoc(gameRef(roomId), state)
 }
@@ -67,7 +76,6 @@ export async function startGame(roomId: string): Promise<void> {
   const deck = createDeck()
   const { hands, remaining } = dealHands(deck, state.playerOrder)
 
-  // First non-wild card for discard pile start
   let startCardIdx = remaining.findIndex(c => c.color !== 'wild')
   if (startCardIdx === -1) startCardIdx = 0
   const [startCard] = remaining.splice(startCardIdx, 1)
@@ -82,6 +90,9 @@ export async function startGame(roomId: string): Promise<void> {
     direction: 1,
     winner: null,
     lastAction: 'Game started!',
+    pendingStack: 0,
+    unoPendingCall: null,
+    wild4Challenge: null,
   })
 }
 
@@ -103,6 +114,52 @@ export async function drawCard(roomId: string, playerId: string): Promise<void> 
   if (!snap.exists()) return
   const state = snap.data() as GameState
   const newState = applyDrawCard(state, playerId)
+  await updateDoc(gameRef(roomId), newState as unknown as Record<string, unknown>)
+}
+
+export async function callUno(roomId: string, playerId: string): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (state.unoPendingCall === playerId) {
+    await updateDoc(gameRef(roomId), { unoPendingCall: null })
+  }
+}
+
+export async function catchUno(roomId: string, targetId: string): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (state.unoPendingCall !== targetId) return
+
+  let deck = [...state.deck]
+  let discardPile = [...state.discardPile]
+  if (deck.length < 2) {
+    const { deck: reshuffled, topCard } = reshuffleDeck(discardPile)
+    deck = reshuffled
+    discardPile = [topCard]
+  }
+  const { drawn, remaining } = drawCards(deck, 2)
+
+  await updateDoc(gameRef(roomId), {
+    [`hands.${targetId}`]: [...(state.hands[targetId] ?? []), ...drawn],
+    deck: remaining,
+    discardPile,
+    unoPendingCall: null,
+    lastAction: `${state.players[targetId]?.name} kena tangkap! Draw 2 penalty!`,
+  })
+}
+
+export async function resolveWild4Challenge(
+  roomId: string,
+  victimId: string,
+  doChallenge: boolean
+): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (!state.wild4Challenge || state.wild4Challenge.victimId !== victimId) return
+  const newState = applyWild4Challenge(state, victimId, doChallenge)
   await updateDoc(gameRef(roomId), newState as unknown as Record<string, unknown>)
 }
 

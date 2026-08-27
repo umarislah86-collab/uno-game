@@ -31,6 +31,16 @@ export default function Lobby({ game, playerId, onBack }: LobbyProps) {
             <p className="text-white/50 text-xs uppercase tracking-widest">Room Code</p>
             <p className="text-white text-3xl font-black tracking-[0.3em]">{game.id}</p>
           </div>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <span className={[
+              'text-xs font-bold px-3 py-1 rounded-full',
+              game.gameMode === 'mamak'
+                ? 'bg-orange-600/30 text-orange-300 border border-orange-500/30'
+                : 'bg-white/10 text-white/50 border border-white/10',
+            ].join(' ')}>
+              {game.gameMode === 'mamak' ? '🥤 Mamak Style' : 'Standard'}
+            </span>
+          </div>
           <p className="text-white/40 text-sm mt-2">Kongsi code ni dengan kawan-kawan kau</p>
         </div>
 
