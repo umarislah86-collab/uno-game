@@ -43,10 +43,10 @@ export default function Hand({
                 key={card.id}
                 layoutId={card.id}
                 layout="position"
-                initial={{ scale: 0.6, opacity: 0, x: -40 }}
-                animate={{ scale: 1, opacity: 1, x: 0 }}
+                initial={{ y: -220, x: 20, scale: 0.5, opacity: 0, rotate: -20 }}
+                animate={{ scale: 1, opacity: 1, x: 0, y: 0, rotate: 0 }}
                 exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                transition={{ type: 'spring', stiffness: 220, damping: 22 }}
                 whileHover={playable ? { y: -18, scale: 1.08, zIndex: 50 } : {}}
                 style={{ marginLeft: i === 0 ? 0 : -20, zIndex: i, position: 'relative' }}
               >
