@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import type { Card, CardColor, GameState } from '../lib/types'
 import { isPlayable } from '../lib/gameLogic'
@@ -10,6 +10,7 @@ import PlayerSeat from '../components/PlayerSeat'
 import UnoButton from '../components/UnoButton'
 import WildColorPicker from '../components/WildColorPicker'
 import RulesModal from '../components/RulesModal'
+import CardSvg from '../components/CardSvg'
 
 interface GameProps {
   game: GameState
@@ -22,8 +23,34 @@ export default function Game({ game, playerId, onBack }: GameProps) {
   const [unoCalled, setUnoCalled] = useState(false)
   const [showRules, setShowRules] = useState(false)
 
+  // Draw animation overlay
+  const deckAreaRef = useRef<HTMLDivElement>(null)
+  const prevHandIdsRef = useRef<string[]>([])
+  const hasInitRef = useRef(false)
+  const [drawFly, setDrawFly] = useState<{ card: Card; fromX: number; fromY: number } | null>(null)
+
   const isMamak = game.gameMode === 'mamak'
   const myHand = game.hands[playerId] ?? []
+
+  useEffect(() => {
+    const currentIds = myHand.map(c => c.id)
+    if (!hasInitRef.current) {
+      hasInitRef.current = true
+      prevHandIdsRef.current = currentIds
+      return
+    }
+    const newCards = myHand.filter(c => !prevHandIdsRef.current.includes(c.id))
+    prevHandIdsRef.current = currentIds
+    if (newCards.length > 0 && deckAreaRef.current) {
+      const rect = deckAreaRef.current.getBoundingClientRect()
+      setDrawFly({
+        card: newCards[newCards.length - 1],
+        fromX: rect.left + rect.width / 2 - 35,
+        fromY: rect.top + rect.height / 2 - 50,
+      })
+    }
+  }, [myHand])
+
   const topCard = game.discardPile[game.discardPile.length - 1] ?? null
   const currentPlayerId = game.playerOrder[game.currentPlayerIndex]
   const isMyTurn = currentPlayerId === playerId
@@ -213,11 +240,13 @@ export default function Game({ game, playerId, onBack }: GameProps) {
 
       {/* Center area: draw pile + discard pile */}
       <div className="flex-1 flex items-center justify-center gap-8 px-4">
-        <DrawPile
-          count={game.deck.length}
-          onDraw={handleDraw}
-          canDraw={isMyTurn && !isMultiPlay}
-        />
+        <div ref={deckAreaRef}>
+          <DrawPile
+            count={game.deck.length}
+            onDraw={handleDraw}
+            canDraw={isMyTurn && !isMultiPlay}
+          />
+        </div>
         <DiscardPile topCard={topCard} />
         <motion.button
           whileTap={{ scale: 0.9 }}
@@ -289,6 +318,29 @@ export default function Game({ game, playerId, onBack }: GameProps) {
 
       {/* Rules modal */}
       {showRules && <RulesModal onClose={() => setShowRules(false)} gameMode={game.gameMode} />}
+
+      {/* Draw animation overlay — fixed card flying from deck to hand */}
+      <AnimatePresence>
+        {drawFly && (
+          <motion.div
+            className="fixed pointer-events-none z-[100]"
+            style={{ left: 0, top: 0 }}
+            initial={{ x: drawFly.fromX, y: drawFly.fromY, rotate: -15, scale: 1, opacity: 1 }}
+            animate={{
+              x: window.innerWidth / 2 - 35,
+              y: window.innerHeight - 120,
+              rotate: 8,
+              scale: 0.95,
+              opacity: 1,
+            }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 22 }}
+            onAnimationComplete={() => setDrawFly(null)}
+          >
+            <CardSvg card={drawFly.card} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     </LayoutGroup>
   )

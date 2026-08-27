@@ -20,10 +20,10 @@ export default function DiscardPile({ topCard }: DiscardPileProps) {
             <motion.div
               key={topCard.id}
               layoutId={topCard.id}
-              initial={{ scale: 1.15, rotate: rotation + 18 }}
-              animate={{ scale: 1, rotate: rotation }}
+              initial={{ y: -200, scale: 0.75, opacity: 0.6, rotate: rotation + 30 }}
+              animate={{ y: 0, scale: 1, opacity: 1, rotate: rotation }}
               exit={{ scale: 0.85, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
               style={{ position: 'absolute' }}
             >
               <CardSvg card={topCard} />
