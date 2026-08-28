@@ -93,7 +93,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGam
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[#1a1a2e] flex flex-col items-center p-4 pt-10 pb-10">
       {/* Title */}
       <motion.div
         initial={{ y: -40, opacity: 0 }}
