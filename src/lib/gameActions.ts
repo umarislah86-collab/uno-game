@@ -28,7 +28,8 @@ export async function createGame(
   roomId: string,
   hostId: string,
   hostName: string,
-  gameMode: GameMode = 'standard'
+  gameMode: GameMode = 'standard',
+  timeLimitSecs: number | null = null
 ): Promise<void> {
   const player: Player = { id: hostId, name: hostName, isConnected: true }
   const state: GameState = {
@@ -52,6 +53,9 @@ export async function createGame(
     wild4Challenge: null,
     multiPlayType: null,
     mamakDrawPhase: null,
+    rankings: [],
+    timeLimitSecs,
+    startedAt: null,
   }
   await setDoc(gameRef(roomId), state)
 }
@@ -97,6 +101,8 @@ export async function startGame(roomId: string): Promise<void> {
     wild4Challenge: null,
     multiPlayType: null,
     mamakDrawPhase: null,
+    rankings: [],
+    startedAt: Date.now(),
   })
 }
 
@@ -198,6 +204,27 @@ export async function reshuffleDraw(roomId: string): Promise<void> {
     ;[deck[i], deck[j]] = [deck[j], deck[i]]
   }
   await updateDoc(gameRef(roomId), { deck, lastAction: '🔀 Deck dikocok semula!' })
+}
+
+export async function triggerTimeout(roomId: string): Promise<void> {
+  const snap = await getDoc(gameRef(roomId))
+  if (!snap.exists()) return
+  const state = snap.data() as GameState
+  if (state.status !== 'playing') return
+
+  // Sort active players by card count ascending (fewest cards wins)
+  const sorted = [...state.playerOrder].sort(
+    (a, b) => (state.hands[a]?.length ?? 0) - (state.hands[b]?.length ?? 0)
+  )
+  const winner = sorted[0]
+  const rankings = [...sorted, ...(state.rankings ?? [])]
+
+  await updateDoc(gameRef(roomId), {
+    status: 'finished',
+    winner,
+    rankings,
+    lastAction: '⏰ Masa tamat! Pemenang: kad paling sikit!',
+  })
 }
 
 export async function leaveGame(roomId: string, playerId: string): Promise<void> {

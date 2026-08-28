@@ -17,6 +17,7 @@ interface BotConfig {
   botCount: number
   gameMode: GameMode
   humanName: string
+  timeLimitSecs: number | null
 }
 
 export default function App() {
@@ -45,8 +46,8 @@ export default function App() {
     if (saved) setRoomId(saved)
   }
 
-  function handleStartBotGame(difficulty: BotDifficulty, botCount: number, gameMode: GameMode, humanName: string) {
-    setBotConfig({ difficulty, botCount, gameMode, humanName })
+  function handleStartBotGame(difficulty: BotDifficulty, botCount: number, gameMode: GameMode, humanName: string, timeLimitSecs: number | null) {
+    setBotConfig({ difficulty, botCount, gameMode, humanName, timeLimitSecs })
   }
 
   // Clear saved room when game finishes
@@ -65,6 +66,7 @@ export default function App() {
         botCount={botConfig.botCount}
         difficulty={botConfig.difficulty}
         gameMode={botConfig.gameMode}
+        timeLimitSecs={botConfig.timeLimitSecs}
         onBack={() => setBotConfig(null)}
       />
     )

@@ -10,7 +10,7 @@ interface HomeProps {
   onEnterRoom: (roomId: string) => void
   onRejoin: () => void
   savedRoomId: string | null
-  onStartBotGame: (difficulty: BotDifficulty, botCount: number, gameMode: GameMode, name: string) => void
+  onStartBotGame: (difficulty: BotDifficulty, botCount: number, gameMode: GameMode, name: string, timeLimitSecs: number | null) => void
 }
 
 const DIFFICULTY_INFO: Record<BotDifficulty, { label: string; desc: string; color: string }> = {
@@ -18,6 +18,13 @@ const DIFFICULTY_INFO: Record<BotDifficulty, { label: string; desc: string; colo
   medium: { label: 'Sederhana',  desc: 'Pilih kad terbaik, agak cergas',    color: 'bg-yellow-500 border-yellow-400' },
   hard:   { label: 'Susah',      desc: 'Agresif & bijak, susah nak kalah',  color: 'bg-red-600 border-red-500' },
 }
+
+const TIME_OPTIONS: { label: string; value: number | null }[] = [
+  { label: 'Tiada', value: null },
+  { label: '5 min', value: 300 },
+  { label: '10 min', value: 600 },
+  { label: '15 min', value: 900 },
+]
 
 export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGame }: HomeProps) {
   const { playerId, playerName, setPlayerName } = usePlayer()
@@ -27,10 +34,12 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGam
   const [error, setError] = useState('')
   const [showRules, setShowRules] = useState(false)
   const [gameMode, setGameMode] = useState<GameMode>('standard')
+  const [timeLimitSecs, setTimeLimitSecs] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'multi' | 'bot'>('multi')
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('medium')
   const [botCount, setBotCount] = useState(1)
   const [botGameMode, setBotGameMode] = useState<GameMode>('standard')
+  const [botTimeLimitSecs, setBotTimeLimitSecs] = useState<number | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -52,7 +61,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGam
     setError('')
     const roomId = genRoomCode()
     setPlayerName(name)
-    await createGame(roomId, playerId, name, gameMode)
+    await createGame(roomId, playerId, name, gameMode, timeLimitSecs)
     onEnterRoom(roomId)
     setLoading(false)
   }
@@ -80,7 +89,7 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGam
     if (!name) return setError('Masukkan nama kau dulu!')
     setError('')
     setPlayerName(name)
-    onStartBotGame(botDifficulty, botCount, botGameMode, name)
+    onStartBotGame(botDifficulty, botCount, botGameMode, name, botTimeLimitSecs)
   }
 
   return (
@@ -183,6 +192,27 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGam
               {gameMode === 'mamak' && (
                 <p className="text-orange-400/70 text-xs mt-1.5">Stack +2/+4 · Tangkap UNO · Multi-play</p>
               )}
+            </div>
+
+            {/* Time limit */}
+            <div>
+              <label className="text-white/60 text-xs uppercase tracking-wider block mb-2">Had Masa</label>
+              <div className="grid grid-cols-4 gap-2">
+                {TIME_OPTIONS.map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    onClick={() => setTimeLimitSecs(opt.value)}
+                    className={[
+                      'py-2 rounded-xl text-xs font-bold transition border',
+                      timeLimitSecs === opt.value
+                        ? 'bg-indigo-600 border-indigo-500 text-white'
+                        : 'bg-white/5 border-white/10 text-white/50 hover:text-white/80',
+                    ].join(' ')}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <motion.button
@@ -289,6 +319,27 @@ export default function Home({ onEnterRoom, onRejoin, savedRoomId, onStartBotGam
                 >
                   🥤 Mamak
                 </button>
+              </div>
+            </div>
+
+            {/* Time limit */}
+            <div>
+              <label className="text-white/60 text-xs uppercase tracking-wider block mb-2">Had Masa</label>
+              <div className="grid grid-cols-4 gap-2">
+                {TIME_OPTIONS.map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    onClick={() => setBotTimeLimitSecs(opt.value)}
+                    className={[
+                      'py-2 rounded-xl text-xs font-bold transition border',
+                      botTimeLimitSecs === opt.value
+                        ? 'bg-indigo-600 border-indigo-500 text-white'
+                        : 'bg-white/5 border-white/10 text-white/50 hover:text-white/80',
+                    ].join(' ')}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 

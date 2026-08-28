@@ -17,18 +17,50 @@ interface BotGameProps {
   botCount: number
   difficulty: BotDifficulty
   gameMode: 'standard' | 'mamak'
+  timeLimitSecs: number | null
   onBack: () => void
 }
 
 const BOT_DELAY: Record<BotDifficulty, number> = { easy: 1200, medium: 800, hard: 450 }
 const DIFFICULTY_LABELS: Record<BotDifficulty, string> = { easy: 'Senang', medium: 'Sederhana', hard: 'Susah' }
+const MEDALS = ['🥇', '🥈', '🥉', '#4', '#5', '#6']
+const CONFETTI_COLORS = ['#E8192C', '#0066CC', '#1AAB56', '#FFCC00', '#FF6B35', '#7C3AED', '#EC4899']
 
-export default function BotGame({ humanId, humanName, botCount, difficulty, gameMode, onBack }: BotGameProps) {
+function Confetti() {
+  const particles = Array.from({ length: 36 }, (_, i) => ({
+    x: `${(i / 36) * 100 + Math.sin(i) * 5}%`,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    delay: (i * 0.07) % 1.4,
+    duration: 1.8 + (i % 5) * 0.3,
+    rotate: i * 47,
+  }))
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-2 h-3 rounded-sm"
+          style={{ left: p.x, top: -12, backgroundColor: p.color, rotate: p.rotate }}
+          animate={{ y: typeof window !== 'undefined' ? window.innerHeight + 20 : 900, rotate: p.rotate + 540, opacity: [1, 1, 0] }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn' }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function formatTime(secs: number) {
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+export default function BotGame({ humanId, humanName, botCount, difficulty, gameMode, timeLimitSecs, onBack }: BotGameProps) {
   const [state, setState] = useState<GameState>(() =>
-    createBotGameState(humanId, humanName, botCount, gameMode)
+    createBotGameState(humanId, humanName, botCount, gameMode, timeLimitSecs)
   )
   const [pendingWildCard, setPendingWildCard] = useState<Card | null>(null)
-  const [unoCalled, setUnoCalled] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
   // Draw animation overlay
   const deckAreaRef = useRef<HTMLDivElement>(null)
@@ -43,6 +75,7 @@ export default function BotGame({ humanId, humanName, botCount, difficulty, game
   const isMyTurn = currentPlayerId === humanId
   const isMultiPlay = isMamak && !!state.multiPlayType && isMyTurn
   const isDrawPhase = isMamak && state.mamakDrawPhase === humanId && isMyTurn
+  const canCallUno = myHand.length === 1 && state.unoPendingCall === humanId
 
   // Draw animation when human draws
   useEffect(() => {
@@ -81,6 +114,31 @@ export default function BotGame({ humanId, humanName, botCount, difficulty, game
     return () => clearTimeout(timer)
   }, [state, humanId, difficulty, isMamak])
 
+  // Local countdown timer
+  useEffect(() => {
+    if (!state.timeLimitSecs || !state.startedAt) return
+    const startedAt = state.startedAt
+    const limit = state.timeLimitSecs
+    const tick = () => {
+      const left = Math.max(0, limit - Math.floor((Date.now() - startedAt) / 1000))
+      setTimeLeft(left)
+      if (left === 0) {
+        setState(prev => {
+          if (prev.status !== 'playing') return prev
+          const sorted = [...prev.playerOrder].sort(
+            (a, b) => (prev.hands[a]?.length ?? 0) - (prev.hands[b]?.length ?? 0)
+          )
+          const winner = sorted[0]
+          const rankings = [...sorted, ...(prev.rankings ?? [])]
+          return { ...prev, status: 'finished', winner, rankings, lastAction: '⏰ Masa tamat! Pemenang: kad paling sikit!' }
+        })
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [state.timeLimitSecs, state.startedAt])
+
   function handlePlay(card: Card) {
     if (!isMyTurn) return
     if (!isPlayable(card, topCard, state.currentColor, state.pendingStack, state.gameMode, state.multiPlayType)) return
@@ -102,8 +160,16 @@ export default function BotGame({ humanId, humanName, botCount, difficulty, game
     setState(prev => applyDrawCard(prev, humanId))
   }
 
-  const canCallUno = myHand.length === 2 && isMyTurn && !unoCalled
+  function handleRestart() {
+    setPendingWildCard(null)
+    hasInitRef.current = false
+    prevHandIdsRef.current = []
+    setTimeLeft(null)
+    setState(createBotGameState(humanId, humanName, botCount, gameMode, timeLimitSecs))
+  }
+
   const showStackWarning = isMamak && state.pendingStack > 0 && isMyTurn
+
   const otherPlayers = state.playerOrder
     .filter(id => id !== humanId)
     .map(id => ({
@@ -113,47 +179,81 @@ export default function BotGame({ humanId, humanName, botCount, difficulty, game
       isCurrentTurn: state.playerOrder[state.currentPlayerIndex] === id,
     }))
 
-  // Win screen
+  // Result screen
   if (state.status === 'finished') {
-    const winner = state.winner ? state.players[state.winner] : null
-    const iWon = state.winner === humanId
+    const rankings = state.rankings ?? []
+    const myRank = rankings.indexOf(humanId)
+    const iWon = myRank === 0
+
     return (
-      <div className="min-h-screen bg-[#1a1a2e] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#1a1a2e] flex flex-col items-center justify-center p-4 relative">
+        {iWon && <Confetti />}
         <motion.div
-          initial={{ scale: 0, opacity: 0 }}
+          initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 16 }}
-          className="text-center"
+          transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+          className="relative z-20 w-full max-w-sm"
         >
-          <div className="text-8xl mb-4">{iWon ? '🏆' : '😢'}</div>
-          <h1
-            className={['text-5xl font-black mb-2', iWon ? 'text-yellow-400' : 'text-white'].join(' ')}
-            style={{ fontFamily: 'Arial Black, sans-serif' }}
-          >
-            {iWon ? 'KAU MENANG!' : 'TAMAT!'}
-          </h1>
-          <p className="text-white/60 text-lg mb-1">
-            {iWon ? 'Tahniah, kau kalahkan bot!' : `${winner?.name ?? 'Bot'} menang!`}
-          </p>
-          <p className="text-white/30 text-sm mb-8">Kesukaran: {DIFFICULTY_LABELS[difficulty]}</p>
-          <div className="flex gap-3 justify-center">
+          <div className="text-center mb-4">
+            <motion.div
+              className="text-7xl"
+              animate={iWon ? { rotate: [0, -8, 8, -8, 8, 0], scale: [1, 1.15, 1] } : {}}
+              transition={{ delay: 0.4, duration: 0.7 }}
+            >
+              {iWon ? '🏆' : myRank === 1 ? '🥈' : myRank === 2 ? '🥉' : '🃏'}
+            </motion.div>
+            <h1
+              className={['text-4xl font-black mt-2', iWon ? 'text-yellow-400' : 'text-white'].join(' ')}
+              style={{ fontFamily: 'Arial Black, sans-serif', textShadow: iWon ? '0 0 30px rgba(250,204,21,0.6)' : 'none' }}
+            >
+              {iWon ? 'KAU MENANG! 🎉' : myRank === -1 ? 'TAMAT!' : `KEDUDUKAN #${myRank + 1}`}
+            </h1>
+            <p className="text-white/40 text-xs mt-1">Kesukaran: {DIFFICULTY_LABELS[difficulty]}</p>
+          </div>
+
+          {rankings.length > 0 && (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-5 flex flex-col gap-2">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Kedudukan Akhir</p>
+              {rankings.map((id, i) => {
+                const isMe = id === humanId
+                return (
+                  <motion.div
+                    key={id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.15 + i * 0.08 }}
+                    className={[
+                      'flex items-center gap-3 px-3 py-2 rounded-xl',
+                      i === 0 ? 'bg-yellow-500/15 border border-yellow-500/30' : 'bg-white/5',
+                    ].join(' ')}
+                  >
+                    <span className="text-lg w-6 text-center">{MEDALS[i] ?? `#${i + 1}`}</span>
+                    <span className={['font-bold flex-1', isMe ? 'text-yellow-300' : 'text-white'].join(' ')}>
+                      {state.players[id]?.name ?? id}
+                    </span>
+                    {isMe && <span className="text-yellow-400/60 text-xs">← kau</span>}
+                    {i === 0 && !isMe && <span className="text-yellow-500 text-xs font-bold">WINNER</span>}
+                  </motion.div>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="flex gap-3">
             <motion.button
-              onClick={() => {
-                setPendingWildCard(null)
-                setUnoCalled(false)
-                hasInitRef.current = false
-                prevHandIdsRef.current = []
-                setState(createBotGameState(humanId, humanName, botCount, gameMode))
-              }}
+              onClick={handleRestart}
               whileTap={{ scale: 0.97 }}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-xl text-lg transition"
+              className={[
+                'flex-1 font-bold py-3 rounded-xl text-lg transition',
+                iWon ? 'bg-yellow-500 hover:bg-yellow-400 text-black' : 'bg-red-600 hover:bg-red-500 text-white',
+              ].join(' ')}
             >
               Main Balik
             </motion.button>
             <motion.button
               onClick={onBack}
               whileTap={{ scale: 0.97 }}
-              className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-3 px-8 rounded-xl text-lg transition"
+              className="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-3 rounded-xl text-lg transition"
             >
               Menu
             </motion.button>
@@ -182,6 +282,15 @@ export default function BotGame({ humanId, humanName, botCount, difficulty, game
           <span className="text-white/30 text-xs ml-1">{state.direction === 1 ? '→' : '←'}</span>
           {isMamak && <span className="text-orange-400/70 text-xs ml-1">🥤</span>}
           <span className="text-yellow-500/60 text-xs ml-1 font-bold">🤖 {DIFFICULTY_LABELS[difficulty]}</span>
+          {timeLeft !== null && (
+            <motion.span
+              className={['text-xs font-bold ml-1 tabular-nums', timeLeft < 30 ? 'text-red-400' : 'text-white/50'].join(' ')}
+              animate={timeLeft < 30 && timeLeft > 0 ? { opacity: [1, 0.4, 1] } : {}}
+              transition={{ repeat: Infinity, duration: 0.8 }}
+            >
+              ⏱ {formatTime(timeLeft)}
+            </motion.span>
+          )}
           <span className="text-white/15 text-[10px] ml-1">umartm</span>
         </div>
         <div className="w-12" />
@@ -299,7 +408,7 @@ export default function BotGame({ humanId, humanName, botCount, difficulty, game
             </motion.button>
           )}
           <UnoButton
-            onUno={() => { setUnoCalled(true); setTimeout(() => setUnoCalled(false), 3000) }}
+            onUno={() => setState(prev => ({ ...prev, unoPendingCall: null }))}
             canCallUno={canCallUno}
           />
         </div>

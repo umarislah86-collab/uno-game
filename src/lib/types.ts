@@ -49,4 +49,8 @@ export interface GameState {
   wild4Challenge: Wild4Challenge | null
   multiPlayType: CardType | null
   mamakDrawPhase: string | null  // playerId drawing one-by-one until playable found
+  // rankings & timer
+  rankings: string[]           // player IDs in finish order; rankings[0] = 1st place
+  timeLimitSecs: number | null // null = no time limit
+  startedAt: number | null     // Date.now() when status moved to 'playing'
 }

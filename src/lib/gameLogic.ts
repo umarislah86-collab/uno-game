@@ -54,24 +54,44 @@ export function applyPlayCard(
   // Playing a card always ends draw phase
   newState.mamakDrawPhase = null
 
-  // Check win
+  // Elimination: player played their last card
   if (newState.hands[playerId].length === 0) {
-    newState.winner = playerId
-    newState.status = 'finished'
-    newState.lastAction = `${newState.players[playerId].name} wins!`
+    newState.rankings = [...(newState.rankings ?? []), playerId]
+    const myPos = newState.playerOrder.indexOf(playerId)
+    newState.playerOrder = newState.playerOrder.filter(id => id !== playerId)
     newState.unoPendingCall = null
-    newState.pendingStack = 0
-    newState.wild4Challenge = null
     newState.multiPlayType = null
     newState.mamakDrawPhase = null
+    newState.pendingStack = 0
+
+    if (newState.playerOrder.length <= 1) {
+      // Last player remaining is final place
+      if (newState.playerOrder.length === 1) {
+        newState.rankings = [...newState.rankings, newState.playerOrder[0]]
+        newState.playerOrder = []
+      }
+      newState.winner = newState.rankings[0]
+      newState.status = 'finished'
+      newState.lastAction = `${newState.players[playerId].name} habis kad! Tamat! 🏆`
+      return newState
+    }
+
+    // Adjust currentPlayerIndex after removal
+    const newLen = newState.playerOrder.length
+    newState.currentPlayerIndex =
+      newState.direction === 1
+        ? myPos % newLen
+        : ((myPos - 1) + newLen) % newLen
+
+    newState.lastAction = `${newState.players[playerId].name} habis kad! Kedudukan #${newState.rankings.length} 🎉`
     return newState
   }
 
-  // UNO penalty tracking (mamak only)
-  if (isMamak && newState.hands[playerId].length === 1) {
+  // UNO tracking (all modes): set pending when player drops to 1 card
+  if (newState.hands[playerId].length === 1) {
     newState.unoPendingCall = playerId
   } else {
-    // If someone else is pending and a new card is played, clear the window
+    // Another card played — close the catch window for whoever was pending
     if (newState.unoPendingCall !== playerId) {
       newState.unoPendingCall = null
     }

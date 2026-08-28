@@ -41,7 +41,8 @@ export function createBotGameState(
   humanId: string,
   humanName: string,
   botCount: number,
-  gameMode: GameMode
+  gameMode: GameMode,
+  timeLimitSecs: number | null = null
 ): GameState {
   const botIds = Array.from({ length: botCount }, (_, i) => `bot${i + 1}`)
   const players: Record<string, Player> = {
@@ -81,6 +82,9 @@ export function createBotGameState(
     wild4Challenge: null,
     multiPlayType: null,
     mamakDrawPhase: null,
+    rankings: [],
+    timeLimitSecs,
+    startedAt: Date.now(),
   }
 }
 
@@ -97,7 +101,8 @@ export function runBotTurn(state: GameState, botId: string, difficulty: BotDiffi
     if (playable.length > 0) {
       const chosen = chooseCard(playable, difficulty)
       const color = (chosen.type === 'wild' || chosen.type === 'wild4') ? chooseColor(hand, difficulty) : undefined
-      return applyPlayCard(state, botId, chosen, color)
+      const next = applyPlayCard(state, botId, chosen, color)
+      return next.unoPendingCall === botId ? { ...next, unoPendingCall: null } : next
     }
     return applyDrawCard(state, botId)
   }
@@ -117,7 +122,8 @@ export function runBotTurn(state: GameState, botId: string, difficulty: BotDiffi
     if (continuePlay) {
       const chosen = chooseCard(playable, difficulty)
       const color = (chosen.type === 'wild' || chosen.type === 'wild4') ? chooseColor(hand, difficulty) : undefined
-      return applyPlayCard(state, botId, chosen, color)
+      const next = applyPlayCard(state, botId, chosen, color)
+      return next.unoPendingCall === botId ? { ...next, unoPendingCall: null } : next
     }
     return applyPassMultiPlay(state)
   }
@@ -129,7 +135,8 @@ export function runBotTurn(state: GameState, botId: string, difficulty: BotDiffi
   if (playable.length > 0) {
     const chosen = chooseCard(playable, difficulty)
     const color = (chosen.type === 'wild' || chosen.type === 'wild4') ? chooseColor(hand, difficulty) : undefined
-    return applyPlayCard(state, botId, chosen, color)
+    const next = applyPlayCard(state, botId, chosen, color)
+    return next.unoPendingCall === botId ? { ...next, unoPendingCall: null } : next
   }
   return applyDrawCard(state, botId)
 }
