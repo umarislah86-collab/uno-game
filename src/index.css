@@ -12,8 +12,6 @@ body {
   margin: 0;
   background: #1a1a2e;
   font-family: system-ui, sans-serif;
-  overscroll-behavior: none;
-  overflow: hidden;
 }
 
 #root {
